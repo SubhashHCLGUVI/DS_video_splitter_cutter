@@ -5,6 +5,11 @@ import uuid
 import threading
 import time
 from flask import Flask, request, jsonify, send_file, render_template
+import os
+os.environ["PATH"] = os.path.expanduser("~/ffmpeg") + ":" + os.environ.get("PATH", "")  # ADD THIS
+import math
+import subprocess
+...
 
 app = Flask(__name__)
 
