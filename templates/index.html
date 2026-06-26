@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUVI Video Splitter</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e5e5e5;padding:1rem 2rem;display:flex;align-items:center;gap:12px}
+.header h1{font-size:18px;font-weight:600}
+.badge{font-size:12px;background:#e8f4fd;color:#1565c0;padding:3px 10px;border-radius:20px}
+.container{max-width:760px;margin:2rem auto;padding:0 1rem}
+.card{background:#fff;border-radius:12px;border:1px solid #e5e5e5;padding:1.5rem;margin-bottom:1rem}
+.drop-zone{border:2px dashed #d0d0d0;border-radius:10px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .2s}
+.drop-zone:hover,.drop-zone.drag{border-color:#1976d2;background:#f0f7ff}
+.drop-zone svg{width:40px;height:40px;color:#1976d2;margin:0 auto 1rem;display:block}
+.drop-zone h3{font-size:16px;font-weight:500;margin-bottom:.25rem}
+.drop-zone p{font-size:13px;color:#666}
+.file-bar{display:flex;align-items:center;gap:12px;padding:.75rem 1rem;background:#f8f8f8;border-radius:8px;border:1px solid #e5e5e5}
+.file-bar .icon{width:36px;height:36px;background:#e8f4fd;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-bar .icon svg{width:18px;height:18px;color:#1565c0}
+.file-bar .info{flex:1;min-width:0}
+.file-bar .name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-bar .meta{font-size:12px;color:#888;margin-top:2px}
+.btn-x{background:none;border:none;cursor:pointer;color:#999;padding:4px;border-radius:6px;font-size:18px;line-height:1}
+.btn-x:hover{color:#333;background:#eee}
+.tabs{display:flex;gap:6px;margin-bottom:1.25rem}
+.tab{padding:8px 18px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.tab.active{background:#1976d2;color:#fff;border-color:#1976d2}
+.panel{display:none}.panel.active{display:block}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:.75rem}
+.row label{font-size:13px;color:#555;min-width:90px;flex-shrink:0}
+.row input[type=number]{width:90px;padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-size:14px;background:#fff}
+.row select{padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-size:14px;background:#fff;cursor:pointer}
+.preview{background:#f0f7ff;border-radius:8px;padding:.6rem 1rem;font-size:13px;color:#555;margin-bottom:.75rem;border-left:3px solid #1976d2}
+.preview b{color:#1565c0}
+.hint{font-size:12px;color:#888;padding:.5rem .75rem;background:#fffbf0;border-radius:8px;border-left:3px solid #f0a500;margin-bottom:.75rem}
+.btn-run{width:100%;padding:11px;border-radius:8px;border:none;background:#1976d2;color:#fff;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .2s}
+.btn-run:hover{background:#1565c0}
+.btn-run:disabled{opacity:.5;cursor:not-allowed}
+.prog-wrap{margin-top:1rem;display:none}.prog-wrap.show{display:block}
+.prog-label{font-size:13px;color:#555;margin-bottom:.5rem;display:flex;justify-content:space-between}
+.prog-bar{height:8px;background:#e5e5e5;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;background:#1976d2;border-radius:4px;transition:width .25s;width:0%}
+.downloads{margin-top:1rem}
+.dl-item{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;background:#f9f9f9;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:8px}
+.dl-item span{font-size:13px;font-weight:500}
+.dl-item .sz{font-size:12px;color:#888;margin-left:6px;font-weight:400}
+.dl-btn{font-size:12px;color:#1565c0;text-decoration:none;padding:5px 12px;border:1px solid #b3d1f5;border-radius:6px;display:inline-flex;align-items:center;gap:4px}
+.dl-btn:hover{background:#e8f4fd}
+.dl-btn svg{width:14px;height:14px}
+.err{font-size:13px;color:#c62828;padding:.5rem .75rem;background:#fff5f5;border-radius:8px;border:1px solid #ffcdd2;margin-top:.5rem}
+.mp3-box{margin-bottom:.75rem;padding:.75rem 1rem;background:#f5f5f5;border-radius:8px;border:1px solid #e5e5e5}
+.mp3-box label.main{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500}
+.mp3-opts{margin-top:.75rem;display:flex;flex-wrap:wrap;gap:10px}
+.mp3-opts label{font-size:12px;color:#666}
+.mp3-opts select{padding:5px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px;background:#fff}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg width="22" height="22" fill="none" stroke="#1976d2" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M10 10l4-2.5v5L10 10z"/></svg>
+  <h1>GUVI Video Splitter</h1>
+  <span class="badge">No quality loss · 1GB+ supported</span>
+</div>
+
+<div class="container">
+
+  <!-- Upload card -->
+  <div class="card">
+    <div class="drop-zone" id="dropZone">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+      <h3>Drop your video here or click to browse</h3>
+      <p>MP4, MOV, MKV, WebM, AVI · Any size supported</p>
+      <input type="file" id="fileInput" accept="video/*" style="display:none">
+    </div>
+    <!-- upload progress -->
+    <div class="prog-wrap" id="upProg" style="margin-top:.75rem">
+      <div class="prog-label"><span id="upLabel">Uploading...</span><span id="upPct">0%</span></div>
+      <div class="prog-bar"><div class="prog-fill" id="upFill"></div></div>
+    </div>
+    <div id="fileBar" style="display:none;margin-top:.75rem"></div>
+  </div>
+
+  <!-- Action card -->
+  <div class="card" id="mainCard" style="display:none">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('split',this)">✂️ Split video</button>
+      <button class="tab" onclick="switchTab('mp3',this)">🎵 Extract MP3</button>
+      <button class="tab" onclick="switchTab('trim',this)">🔪 Trim clip</button>
+    </div>
+
+    <!-- SPLIT -->
+    <div id="tab-split" class="panel active">
+      <div class="row">
+        <label>Split by</label>
+        <select id="splitMode" onchange="updatePreview()">
+          <option value="duration">Duration (minutes)</option>
+          <option value="parts">Equal parts</option>
+          <option value="size">Target size (MB)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label id="splitValLabel">Minutes each</label>
+        <input type="number" id="splitVal" value="5" min="1" oninput="updatePreview()">
+      </div>
+      <div class="preview" id="splitPreview">Load a video to see preview</div>
+      <div class="hint">⚡ ffmpeg stream copy — zero re-encoding, zero quality loss</div>
+      <div class="mp3-box">
+        <label class="main">
+          <input type="checkbox" id="alsoMp3" checked style="width:16px;height:16px;cursor:pointer">
+          Also extract MP3 for each split
+        </label>
+        <div class="mp3-opts" id="mp3Opts">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label>Quality</label>
+            <select id="splitMp3Q">
+              <option value="0">Best (V0)</option>
+              <option value="2" selected>High (V2)</option>
+              <option value="5">Medium (V5)</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label>Sample rate</label>
+            <select id="splitMp3R">
+              <option value="44100" selected>44.1 kHz</option>
+              <option value="48000">48 kHz</option>
+              <option value="22050">22 kHz</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="btn-run" id="btnSplit" onclick="runSplit()">Split video</button>
+    </div>
+
+    <!-- MP3 -->
+    <div id="tab-mp3" class="panel">
+      <div class="row">
+        <label>Quality</label>
+        <select id="mp3Quality">
+          <option value="0">Best (V0 ~245kbps)</option>
+          <option value="2" selected>High (V2 ~190kbps)</option>
+          <option value="5">Medium (V5 ~130kbps)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Sample rate</label>
+        <select id="mp3Rate">
+          <option value="44100" selected>44.1 kHz (CD)</option>
+          <option value="48000">48 kHz (Pro)</option>
+          <option value="22050">22 kHz (small)</option>
+        </select>
+      </div>
+      <div class="hint">🎵 Extracts audio track only — no video processing</div>
+      <button class="btn-run" id="btnMp3" onclick="runMp3()">Extract MP3</button>
+    </div>
+
+    <!-- TRIM -->
+    <div id="tab-trim" class="panel">
+      <div class="row">
+        <label>Start (sec)</label>
+        <input type="number" id="trimStart" value="0" min="0" step="1">
+      </div>
+      <div class="row">
+        <label>End (sec)</label>
+        <input type="number" id="trimEnd" value="60" min="1" step="1">
+      </div>
+      <div class="hint">✂️ Stream copy — original quality preserved</div>
+      <button class="btn-run" id="btnTrim" onclick="runTrim()">Trim clip</button>
+    </div>
+
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-label"><span id="progLabel">Processing...</span></div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+    <div id="errBox"></div>
+    <div class="downloads" id="downloads"></div>
+  </div>
+
+</div>
+
+<script>
+// ── state ──────────────────────────────────────────────────────────────────────
+let session = null;
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB chunks
+
+// ── upload ─────────────────────────────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.onclick     = () => fileInput.click();
+dropZone.ondragover  = e => { e.preventDefault(); dropZone.classList.add('drag'); };
+dropZone.ondragleave = () => dropZone.classList.remove('drag');
+dropZone.ondrop      = e => { e.preventDefault(); dropZone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); };
+fileInput.onchange   = e => handleFile(e.target.files[0]);
+
+function fmtMB(mb) {
+  return mb >= 1000 ? (mb/1024).toFixed(2)+' GB' : mb.toFixed(1)+' MB';
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  clearOutputs();
+  session = null;
+  document.getElementById('fileBar').style.display = 'none';
+  document.getElementById('mainCard').style.display = 'none';
+
+  const uploadId   = crypto.randomUUID();
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+  // show upload progress
+  const upProg = document.getElementById('upProg');
+  const upFill = document.getElementById('upFill');
+  const upLabel = document.getElementById('upLabel');
+  const upPct  = document.getElementById('upPct');
+  upProg.classList.add('show');
+
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const chunk = file.slice(start, start + CHUNK_SIZE);
+    const fd    = new FormData();
+    fd.append('upload_id',    uploadId);
+    fd.append('chunk_index',  i);
+    fd.append('total_chunks', totalChunks);
+    fd.append('chunk', chunk);
+
+    const pct = Math.round(((i) / totalChunks) * 90);
+    upLabel.textContent = `Uploading chunk ${i+1} of ${totalChunks}...`;
+    upPct.textContent   = pct + '%';
+    upFill.style.width  = pct + '%';
+
+    const r = await fetch('/upload/chunk', { method: 'POST', body: fd });
+    if (!r.ok) { showUploadError('Chunk upload failed. Retry.'); return; }
+  }
+
+  upLabel.textContent = 'Assembling file...';
+  upPct.textContent   = '95%';
+  upFill.style.width  = '95%';
+
+  const fin = await fetch('/upload/finalise', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ upload_id: uploadId, total_chunks: totalChunks, filename: file.name })
+  });
+  const data = await fin.json();
+  if (data.error) { showUploadError(data.error); return; }
+
+  upFill.style.width  = '100%';
+  upPct.textContent   = '100%';
+  setTimeout(() => upProg.classList.remove('show'), 800);
+
+  session = data;
+  showFileBar(data);
+  updatePreview();
+  document.getElementById('trimEnd').value = Math.floor(data.duration);
+  document.getElementById('mainCard').style.display = 'block';
+}
+
+function showUploadError(msg) {
+  document.getElementById('upProg').classList.remove('show');
+  document.getElementById('errBox').innerHTML = `<div class="err">❌ ${msg}</div>`;
+  dropZone.style.display = '';
+}
+
+function showFileBar(data) {
+  const bar = document.getElementById('fileBar');
+  bar.style.display = 'block';
+  bar.innerHTML = `<div class="file-bar">
+    <div class="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M10 10l4-2.5v5L10 10z"/></svg></div>
+    <div class="info">
+      <div class="name">${data.original_name}</div>
+      <div class="meta">${fmtMB(data.size_mb)} &nbsp;·&nbsp; ${data.duration_str}</div>
+    </div>
+    <button class="btn-x" onclick="clearAll()">✕</button>
+  </div>`;
+}
+
+function clearAll() {
+  session = null;
+  document.getElementById('fileBar').style.display = 'none';
+  document.getElementById('mainCard').style.display = 'none';
+  clearOutputs();
+  fileInput.value = '';
+}
+
+function clearOutputs() {
+  document.getElementById('downloads').innerHTML = '';
+  document.getElementById('errBox').innerHTML    = '';
+  const pw = document.getElementById('progWrap');
+  if (pw) { pw.classList.remove('show'); document.getElementById('progFill').style.width = '0%'; }
+}
+
+// ── tabs ───────────────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  clearOutputs();
+}
+
+// ── split preview ──────────────────────────────────────────────────────────────
+function updatePreview() {
+  if (!session) return;
+  const mode   = document.getElementById('splitMode').value;
+  const val    = parseFloat(document.getElementById('splitVal').value) || 5;
+  const dur    = session.duration;
+  const sizeMb = session.size_mb;
+  const label  = document.getElementById('splitValLabel');
+  const prev   = document.getElementById('splitPreview');
+  let segs, desc;
+  if (mode === 'duration') {
+    label.textContent = 'Minutes each';
+    segs = Math.ceil(dur / (val * 60));
+    desc = `<b>${segs} segments</b>, ~${val} min each`;
+  } else if (mode === 'parts') {
+    label.textContent = 'Number of parts';
+    segs = Math.max(1, Math.round(val));
+    const each = dur / segs, em = Math.floor(each/60), es = Math.floor(each%60);
+    desc = `<b>${segs} equal parts</b>, ~${em}m ${es}s each`;
+  } else {
+    label.textContent = 'Target MB each';
+    segs = Math.max(1, Math.ceil(sizeMb / val));
+    desc = `<b>~${segs} segments</b>, ~${val} MB each`;
+  }
+  prev.innerHTML = desc;
+}
+
+document.getElementById('splitMode').onchange = updatePreview;
+document.getElementById('splitVal').oninput   = updatePreview;
+document.getElementById('alsoMp3').onchange   = function() {
+  document.getElementById('mp3Opts').style.display = this.checked ? 'flex' : 'none';
+};
+
+// ── processing helpers ─────────────────────────────────────────────────────────
+function setBtns(disabled) {
+  ['btnSplit','btnMp3','btnTrim'].forEach(id => {
+    const b = document.getElementById(id); if (b) b.disabled = disabled;
+  });
+}
+function setProgress(pct, label) {
+  document.getElementById('progFill').style.width  = pct + '%';
+  document.getElementById('progLabel').textContent = label;
+  document.getElementById('progWrap').classList.add('show');
+}
+function showError(msg) {
+  document.getElementById('errBox').innerHTML = `<div class="err">❌ ${msg}</div>`;
+}
+async function post(url, body) {
+  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  return r.json();
+}
+
+// ── download list ──────────────────────────────────────────────────────────────
+function showDownloads(files) {
+  const c = document.getElementById('downloads');
+  c.innerHTML = '';
+  const hasPairs = files.some(f=>f.type==='mp3') && files.some(f=>f.type==='video');
+
+  if (hasPairs) {
+    const videos = files.filter(f=>f.type==='video');
+    const mp3s   = files.filter(f=>f.type==='mp3');
+    videos.forEach((v, i) => {
+      const mp3   = mp3s[i];
+      const group = document.createElement('div');
+      group.style.cssText = 'margin-bottom:10px;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden';
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'padding:6px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#555;border-bottom:1px solid #e5e5e5';
+      hdr.textContent = `Segment ${i+1}`;
+      group.appendChild(hdr);
+      [v, mp3].filter(Boolean).forEach(f => {
+        const row   = document.createElement('div');
+        row.className = 'dl-item';
+        row.style.borderRadius = '0';
+        const icon  = f.type==='mp3' ? '🎵' : '🎬';
+        const badge = f.type==='mp3'
+          ? `<span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:20px;margin-left:6px">MP3</span>`
+          : `<span style="font-size:11px;background:#e8f4fd;color:#1565c0;padding:2px 7px;border-radius:20px;margin-left:6px">Video</span>`;
+        row.innerHTML = `<span>${icon} ${f.filename}${badge}<span class="sz">${f.size_mb} MB</span></span>
+          <a class="dl-btn" href="/download/${f.out_session}/${f.filename}">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download
+          </a>`;
+        group.appendChild(row);
+      });
+      c.appendChild(group);
+    });
+  } else {
+    files.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'dl-item';
+      d.innerHTML = `<span>${f.label}<span class="sz">${f.size_mb} MB</span></span>
+        <a class="dl-btn" href="/download/${f.out_session}/${f.filename}">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Download
+        </a>`;
+      c.appendChild(d);
+    });
+  }
+}
+
+// ── actions ────────────────────────────────────────────────────────────────────
+async function runSplit() {
+  if (!session) return;
+  clearOutputs(); setBtns(true);
+  const alsoMp3 = document.getElementById('alsoMp3').checked;
+  setProgress(5, alsoMp3 ? 'Splitting video + extracting MP3s...' : 'Splitting video...');
+  const data = await post('/split', {
+    session_id: session.session_id, ext: session.ext,
+    mode: document.getElementById('splitMode').value,
+    value: document.getElementById('splitVal').value,
+    original_name: session.original_name,
+    also_mp3: alsoMp3,
+    mp3_quality: document.getElementById('splitMp3Q').value,
+    mp3_rate:    document.getElementById('splitMp3R').value,
+  });
+  setBtns(false);
+  if (data.error) { showError(data.error); return; }
+  const vc = data.files.filter(f=>f.type==='video').length;
+  const mc = data.files.filter(f=>f.type==='mp3').length;
+  setProgress(100, `Done! ${vc} video${vc>1?'s':''}`+(mc?` + ${mc} MP3${mc>1?'s':''}`:''));
+  showDownloads(data.files);
+}
+
+async function runMp3() {
+  if (!session) return;
+  clearOutputs(); setBtns(true);
+  setProgress(5, 'Extracting audio...');
+  const data = await post('/mp3', {
+    session_id: session.session_id, ext: session.ext,
+    quality: document.getElementById('mp3Quality').value,
+    sample_rate: document.getElementById('mp3Rate').value,
+    original_name: session.original_name,
+  });
+  setBtns(false);
+  if (data.error) { showError(data.error); return; }
+  setProgress(100, 'MP3 ready!');
+  showDownloads(data.files);
+}
+
+async function runTrim() {
+  if (!session) return;
+  clearOutputs(); setBtns(true);
+  setProgress(5, 'Trimming...');
+  const data = await post('/trim', {
+    session_id: session.session_id, ext: session.ext,
+    start: document.getElementById('trimStart').value,
+    end:   document.getElementById('trimEnd').value,
+    original_name: session.original_name,
+  });
+  setBtns(false);
+  if (data.error) { showError(data.error); return; }
+  setProgress(100, 'Done!');
+  showDownloads(data.files);
+}
+</script>
+</body>
+</html>
